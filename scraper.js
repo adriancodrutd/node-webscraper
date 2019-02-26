@@ -39,47 +39,6 @@ function findMatch(regex, text, array) {
     }
 };
 
-<<<<<<< Updated upstream
-function scrapeLinks(URL) {
-    rp(URL)
-    .then(function(html) {
-        // if success
-        var $ = cheerio.load(html);
-        var pageText = $.text();
-
-        findMatch(phoneRegex, pageText, phones);
-        findMatch(emailRegex, pageText, emails);
-        findMatch(postcodeRegex, pageText, postcodes);
-
-        $('a').each(function() {
-            var link = $(this).attr('href');
-            insideURL = baseURL + link;
-            if (insideURL.match(urlRegex)) {
-                console.log("Target: " + insideURL);
-                rp(insideURL)
-                .then(function(html) {
-                    var $ = cheerio.load(html);
-                    var pageText = $.text();
-
-                    findMatch(phoneRegex, pageText, phones);
-                    findMatch(emailRegex, pageText, emails);
-                    findMatch(postcodeRegex, pageText, postcodes);
-                })
-            }
-        })
-
-        console.log("Phones: " + phones + '\n' +
-            "Emails: " + emails + '\n' +
-            "Postcodes: " + postcodes);
-    })
-    .catch(function(err) {
-        // handle error
-        console.log(err);
-    });
-}
-
-scrapeLinks(baseURL);
-=======
 function scrapeLinks(pageURL, callback) {
     request(pageURL, function(error, response, body) {
         if (response.statusCode == 200) {
@@ -103,7 +62,7 @@ function scrapeLinks(pageURL, callback) {
                 href = elem.attribs.href;
                 // TODO: URL error checking
                 if (href && href.startsWith('/') && href.length > 1) {
-                    links.push(href);
+                    page.links.push({linkTitle: $(elem).text(), linkURL: href});
                 }
             });
 
@@ -153,4 +112,3 @@ function domainScrape(link) {
 }
 
 domainScrape(baseURL);
->>>>>>> Stashed changes
