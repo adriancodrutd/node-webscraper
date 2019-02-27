@@ -96,7 +96,6 @@ function scrapeLink(pageURL, callback) {
                 // Validate link
                 if (href && href.startsWith('/') && href.length > 1) {
                     page.links.push({linkTitle: $(elem).text(), linkURL: href});
-
                 }
             });
 
