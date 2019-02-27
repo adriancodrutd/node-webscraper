@@ -10,12 +10,6 @@ var email = readline.question("Enter a valid email address: ");
 var domain = email.replace(/.*@/, "");
 var baseURL = 'https://www.' + domain;
 
-var phoneRegex = /(\+\d{1,3}\s?(\s\(0\))?|0)(\d{3}\s?\d{3}\s?\d{4}|\d{4}\s?\d{6})(?![0-9])/g;
-var emailRegex = /[A-Za-z][A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z]{3}|(\.[A-Za-z]{2}){2})/g;
-var postcodeRegex = /[A-Z]{1,2}(([0-9]{1,2})|([0-9][A-Z]))\s[0-9][A-Z]{1,2}/g;
-var urlRegex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9]\.[^\s]{2,})/;
-
-
 var crawled = [];
 var inboundLinks = [];
 var phones = [];
@@ -24,125 +18,113 @@ var postcodes = [];
 
 var knwlInstance = new knwl('english');
 
-knwlInstance.register('internationalPhones', require('knwl.js/experimental_plugins/internationalPhones'));
+// Register Knwl plugins
+knwlInstance.register('accuratePhones', require('knwl.js/experimental_plugins/accuratePhones'));
+knwlInstance.register('postCodes', require('knwl.js/experimental_plugins/postCodes'));
 knwlInstance.register('emails', require('knwl.js/default_plugins/emails'));
-knwlInstance.register('places', require('knwl.js/default_plugins/places'));
-knwlInstance.register('phones', require('knwl.js/default_plugins/phones'));
 
-// Method to find data matching a regular expression and store it in an array
-function findMatch(regex, text, array) {
-    var matchcases = text.match(regex);
+// Finds emails using Knwl.js
+function getEmails() {
+    var emailsFound = knwlInstance.get('emails');
 
-    for (var matchcase in matchcases) {
-        if(array.includes(matchcases[matchcase]) == false)
-            array.push(matchcases[matchcase]);
-    }
-};
-
-<<<<<<< Updated upstream
-function scrapeLinks(URL) {
-    rp(URL)
-    .then(function(html) {
-        // if success
-        var $ = cheerio.load(html);
-        var pageText = $.text();
-
-        findMatch(phoneRegex, pageText, phones);
-        findMatch(emailRegex, pageText, emails);
-        findMatch(postcodeRegex, pageText, postcodes);
-
-        $('a').each(function() {
-            var link = $(this).attr('href');
-            insideURL = baseURL + link;
-            if (insideURL.match(urlRegex)) {
-                console.log("Target: " + insideURL);
-                rp(insideURL)
-                .then(function(html) {
-                    var $ = cheerio.load(html);
-                    var pageText = $.text();
-
-                    findMatch(phoneRegex, pageText, phones);
-                    findMatch(emailRegex, pageText, emails);
-                    findMatch(postcodeRegex, pageText, postcodes);
-                })
-            }
-        })
-
-        console.log("Phones: " + phones + '\n' +
-            "Emails: " + emails + '\n' +
-            "Postcodes: " + postcodes);
+    emailsFound.forEach(function (email) {
+        if (emails.includes(email['address']) == false)
+            emails.push(email['address']);
     })
-    .catch(function(err) {
-        // handle error
-        console.log(err);
-    });
 }
 
-scrapeLinks(baseURL);
-=======
-function scrapeLinks(pageURL, callback) {
-    request(pageURL, function(error, response, body) {
+// Finds phone numbers using Knwl.js
+function getPhones(){
+    var phonesFound = knwlInstance.get('accuratePhones');
+
+    phonesFound.forEach(function (phone) {
+        if (phones.includes(phone) == false)
+            phones.push(phone);
+    })
+}
+
+// Finds postcodes using Knwl.js
+function getPostcodes() {
+    var postcodesFound = knwlInstance.get('postCodes');
+
+    postcodesFound.forEach(function (postcode) {
+        if (postcodes.includes(postcode) == false)
+            postcodes.push(postcode);
+    })
+}
+
+/*
+    Makes a request to a webpage, gets all the content
+    Parses it using Knwl.js to retrieve wanted data:
+        - Phones
+        - Emails
+        - Postcodes
+    Uses Cheerio to get all the page titles and links,
+    in order to show every visited page
+
+    Returns arrays of Phones, Emails and Postcodes.
+*/ 
+function scrapeLink(pageURL, callback) {
+    request(pageURL, function (error, response, body) {
         if (response.statusCode == 200) {
             console.log("Connection successful.\n");
 
             knwlInstance.init(body);
-            words = knwlInstance.words.get('linkWordsCasesensitive');
+
             var page = {};
             page.links = [];
 
-            links = [];
+            // Get all the phones
+            getPhones();
+            // Get all the emails
+            getEmails();
+            // Get all the postcodes
+            getPostcodes();
 
+            // Load cheerio HTML body
             var $ = cheerio.load(body, {
-                    normalizeWhitespace: true,
-                    xmlMode: true
-                });
+                        normalizeWhitespace: true,
+                        xmlMode: true,
+                    });
+
             page.title = $('title').text();
             page.url = pageURL;
 
-            $('a').each(function(i, elem) {
+            // Put all the page titles and all the URLs in arrays 
+            $('a').each(function (i, elem) {
                 href = elem.attribs.href;
-                // TODO: URL error checking
+                // Validate link
                 if (href && href.startsWith('/') && href.length > 1) {
-                    links.push(href);
+                    page.links.push({linkTitle: $(elem).text(), linkURL: href});
+
                 }
             });
-
-            intPhones = knwlInstance.get('internationalPhones');
-
-            // TODO: get Knwl.internationalPhones
-            console.log(intPhones);
-
-            // Use regexs to find data
-            findMatch(phoneRegex, $.text(), phones);
-            findMatch(emailRegex, $.text(), emails);
-            findMatch(postcodeRegex, $.text(), postcodes);
 
             callback(error, page);
         }
     });
 }
 
+/*
+    Uses scrapeLink to scrape every link on the domain recursively
+*/
 function domainScrape(link) {
-    scrapeLinks(link, function(error, page) {
-        console.log(page.links);
-
+    scrapeLink(link, function (error, page) {
         console.log("Phones: \n" + phones +
-                        "\nEmails: \n" + emails +
-                        "\nPostcodes: \n" + postcodes + "\n");
+                    "\n\nEmails: \n" + emails +
+                    "\n\nPostcodes: \n" + postcodes + "\n");
         crawled.push(page.url);
-        async.eachSeries(page.links, function(item, cback) {
+        async.eachSeries(page.links, function (item, cback) {
             parsedURL = url.parse(item.linkURL);
 
+            // If link is inside domain, put it in the array of inbound links
             if (parsedURL.hostname == baseURL) {
-                // TODO: further URL error checking
                 inboundLinks.push(item.linkURL);
             }
-            cback();
-
+            cback(error);
         },
         function () {
-            // Create a duplicates-free array,
-            // excluding previously scraped links
+            // Create a duplicates-free array of links to be scraped
             var nextURLs = _.difference(_.uniq(inboundLinks), crawled);
 
             if (nextURLs.length > 0) {
@@ -153,4 +135,3 @@ function domainScrape(link) {
 }
 
 domainScrape(baseURL);
->>>>>>> Stashed changes
