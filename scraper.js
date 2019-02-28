@@ -38,6 +38,11 @@ function getPhones(){
     var phonesFound = knwlInstance.get('accuratePhones');
 
     phonesFound.forEach(function (phone) {
+        // Format phone numbers
+        phone = phone.replace(/\s+/g, '');
+        if(phone.substring(0,3) == '+44') {
+            phone = phone.replace(phone.substring(0,3), '0');
+        }// Check for duplicates
         if (phones.includes(phone) == false)
             phones.push(phone);
     })
