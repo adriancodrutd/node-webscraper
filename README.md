@@ -1,4 +1,4 @@
-# node-webscraper-techtest
+# Node.js Web Scraper
 Requirements:
 - Cheerio
 - Knwl.js
